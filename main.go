@@ -27,6 +27,10 @@ func updateMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
+	if msg.Content == "" {
+		http.Error(w, "You must include a 'content' field", http.StatusBadRequest)
+		return
+	}
 	if err := os.WriteFile(filePath, []byte(msg.Content), 0644); err != nil {
 		http.Error(w, "Failed to write file", http.StatusInternalServerError)
 		return
