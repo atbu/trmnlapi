@@ -6,19 +6,26 @@ import (
 	"os"
 )
 
-const filePath = "message.txt"
+const messageFilePath = "message.txt"
+const userFilePath = "user.txt"
 
 type Message struct {
 	Content string `json:"content"`
+	User    string `json:"user"`
 }
 
 func getMessage(w http.ResponseWriter, r *http.Request) {
-	data, err := os.ReadFile(filePath)
+	data, err := os.ReadFile(messageFilePath)
+	user, userErr := os.ReadFile(userFilePath)
 	if err != nil && !os.IsNotExist(err) {
 		http.Error(w, "Could not read message", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(Message{Content: string(data)})
+	if userErr != nil && !os.IsNotExist(userErr) {
+		http.Error(w, "Could not read user", http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(Message{Content: string(data), User: string(user)})
 }
 
 func updateMessage(w http.ResponseWriter, r *http.Request) {
@@ -28,14 +35,18 @@ func updateMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if msg.Content == "" {
-		http.Error(w, "You must include a 'content' field", http.StatusBadRequest)
+		http.Error(w, "Your request body must include a 'user' field and a 'content' field", http.StatusBadRequest)
 		return
 	}
-	if err := os.WriteFile(filePath, []byte(msg.Content), 0644); err != nil {
-		http.Error(w, "Failed to write file", http.StatusInternalServerError)
+	if err := os.WriteFile(messageFilePath, []byte(msg.Content), 0644); err != nil {
+		http.Error(w, "Failed to write message file", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]string{"message": "Message updated successfully"})
+	if userErr := os.WriteFile(userFilePath, []byte(msg.User), 0644); userErr != nil {
+		http.Error(w, "Failed to write user file", http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]string{"message": "Message and user updated successfully"})
 }
 
 func main() {
